@@ -1,0 +1,5 @@
+gspread
+numpy
+datetime
+oauth2client
+matplotlib
