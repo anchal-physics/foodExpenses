@@ -1,0 +1,19 @@
+language: python
+python:
+- 3.6.4
+cache: pip
+install:
+- pip install -r requirements.txt
+script:
+- python foodExpenses.py
+deploy:
+  provider: pages
+  github_token: "$GITHUB_TOKEN"
+  skip_cleanup: true
+  keep_history: true
+  on:
+    branch: main
+  target_branch: gh-pages
+before_install:
+- openssl aes-256-cbc -K $encrypted_6e2f2a03909b_key -iv $encrypted_6e2f2a03909b_iv
+  -in foodexpenses-663287ec7fd3.json.enc -out foodexpenses-663287ec7fd3.json -d
