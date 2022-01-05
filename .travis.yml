@@ -1,3 +1,4 @@
+if commit_message != " Deploy anchal-physics/foodExpenses to github.com/anchal-physics/foodExpenses.git:main"
 language: python
 python:
 - 3.6.4
@@ -13,7 +14,7 @@ deploy:
   keep_history: true
   on:
     branch: main
-  target_branch: gh-pages
+  target_branch: main
 before_install:
 - openssl aes-256-cbc -K $encrypted_6e2f2a03909b_key -iv $encrypted_6e2f2a03909b_iv
   -in foodexpenses-663287ec7fd3.json.enc -out foodexpenses-663287ec7fd3.json -d

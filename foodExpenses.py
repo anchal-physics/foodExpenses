@@ -125,6 +125,7 @@ if __name__ == "__main__":
         dates[ii] = parseDate(data, ii, 3)
 
     today = datetime.now().date()
+    todayStr = '{}/{}/{}'.format(today.year, today.month, today.day)
     totalDays = monthrange(today.year, today.month)[1]
     remAllowance = monthlyAllowance
     tt = [date(today.year, today.month, day) for day in range(1, totalDays+1)]
@@ -139,9 +140,9 @@ if __name__ == "__main__":
             else:
                 remAllowance = remAllowance - cost[ii]
     remAllowance = np.round(remAllowance, 2)
-
     todayAllowance = np.round(remAllowance
                               / (totalDays - today.day), 0)
+    thisWeekAllow = todayAllowance * (7 - today.weekday())
 
     with open('showedAllowance.txt', 'r') as f:
         allLines = f.readlines()
@@ -162,12 +163,11 @@ if __name__ == "__main__":
     ax.set_title('Daily food expenses and remaining allowance')
     ax.set_ylabel('Cost [$]')
     ax.text(tt[5], monthlyAllowance/2,
-            'Allowance today: ${}'.format(todayAllowance),
+            '{}\nAllowance today: ${}\nAllowance this week: ${}'.format(
+                today.strftime('%b %d, %Y'), todayAllowance, thisWeekAllow),
             fontsize=36, color='red')
     fig.autofmt_xdate()
     fig.savefig('DailyCostsAndParameters.png')
-
-    todayStr = '{}/{}/{}'.format(today.year, today.month, today.day)
 
     if allLines[-1].split(' ')[0] != todayStr:
         with open('showedAllowance.txt', 'a') as f:
