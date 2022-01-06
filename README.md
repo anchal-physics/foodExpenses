@@ -4,4 +4,4 @@
 
 Repository to track food expenses and inform daily allowance in the month.
 
-![DailyCostsAndParameters](https://github.com/anchal-physics/foodExpenses/blob/main/DailyCostsAndParameters.png)
+![DailyCostsAndParameters](https://github.com/anchal-physics/foodExpenses/blob/gh-pages/DailyCostsAndParameters.png)
