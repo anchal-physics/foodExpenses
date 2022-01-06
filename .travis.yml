@@ -1,4 +1,5 @@
-if: commit_message != " Deploy anchal-physics/foodExpenses to github.com/anchal-physics/foodExpenses.git:main"
+#if: commit_message != "Deploy anchal-physics/foodExpenses to github.com/anchal-physics/foodExpenses.git:main"
+if: sender = "traviscibot"
 language: python
 python:
 - 3.6.4
