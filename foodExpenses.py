@@ -152,6 +152,8 @@ if __name__ == "__main__":
         ttSA[ii] = datetime.strptime(allLines[ii].split(' ')[0],
                                      '%Y/%m/%d').date()
         showedAllowance[ii] = float(allLines[ii].split(' ')[1])
+    ttSA[ii + 1] = today
+    showedAllowance[ii + 1] = todayAllowance
 
     fig, ax = plt.subplots(1, 1, figsize=[16, 12])
     ax.bar(tt, dailyCosts, label='Daily Costs', color='orange')
