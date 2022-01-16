@@ -1,15 +1,9 @@
 import gspread
 import numpy as np
-import argparse
-import copy
-from datetime import timedelta, datetime, date
+from datetime import datetime, date
 from calendar import monthrange
 from oauth2client.service_account import ServiceAccountCredentials
 import matplotlib.pyplot as plt  # For plotting
-# For saving figures to single pdf
-from matplotlib.backends.backend_pdf import PdfPages
-import matplotlib.dates as mdates
-from matplotlib.offsetbox import AnchoredOffsetbox, TextArea, VPacker
 # *****************************************************************************
 # Setting RC Parameters for figure size and fontsizes
 import matplotlib.pylab as pylab
@@ -53,22 +47,6 @@ credentials = ServiceAccountCredentials.from_json_keyfile_name(
 monthlyAllowance = 500
 
 
-def grabInputArgs():
-    parser = argparse.ArgumentParser(
-        description='')
-    parser.add_argument('--type')
-    parser.add_argument('--project_id')
-    parser.add_argument('--private_key_id')
-    parser.add_argument('--private_key')
-    parser.add_argument('--client_email')
-    parser.add_argument('--client_id')
-    parser.add_argument('--auth_uri')
-    parser.add_argument('--token_uri')
-    parser.add_argument('--auth_provider_x509_cert_url')
-    parser.add_argument('--client_x509_cert_url')
-    return parser.parse_args()
-
-
 def parse(data, ii, ind):
     if data[ii][ind] == '':
         return np.NaN
@@ -81,26 +59,6 @@ def parseDate(data, ii, ind):
         return datetime.strptime(data[ii][0], '%m/%d/%Y %H:%M:%S').date()
     else:
         return datetime.strptime(data[ii][ind], '%m/%d/%Y').date()
-
-
-def removeNan(tt, mWater, sWater):
-    ii = 0
-    ttWater = copy.deepcopy(tt)
-    while(ii < len(mWater)):
-        if np.isnan(mWater[ii]):
-            mWater = np.delete(mWater, ii)
-            sWater = np.delete(sWater, ii)
-            del ttWater[ii]
-        else:
-            ii = ii+1
-    return ttWater, mWater, sWater
-
-
-def make_patch_spines_invisible(ax):
-    ax.set_frame_on(True)
-    ax.patch.set_visible(False)
-    for sp in ax.spines.values():
-        sp.set_visible(False)
 
 
 def getData(spName="Food/Groceries expense monitor (Responses)",
@@ -132,7 +90,7 @@ if __name__ == "__main__":
     dailyCosts = np.zeros(len(tt))
     for ii in range(noEntries):
         if today.month == dates[ii].month:
-            dailyCosts[dates[ii].day] += cost[ii]
+            dailyCosts[dates[ii].day - 1] += cost[ii]
             if daysFor[ii] > 1:
                 remAllowance = (remAllowance
                                 - ((today.day - dates[ii].day)
