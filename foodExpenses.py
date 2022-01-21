@@ -71,7 +71,7 @@ def getData(spName="Food/Groceries expense monitor (Responses)",
     return ts, data
 
 
-if __name__ == "__main__":
+def foodExpenses():
     ts, data = getData()
     noEntries = len(ts)
     cost = np.zeros(noEntries)
@@ -134,3 +134,7 @@ if __name__ == "__main__":
     if allLines[-1].split(' ')[0] != todayStr:
         with open('showedAllowance.txt', 'a') as f:
             f.writelines(todayStr + ' ' + str(todayAllowance) + '\n')
+
+
+if __name__ == "__main__":
+    foodExpenses()
