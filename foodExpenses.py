@@ -83,22 +83,19 @@ def foodExpenses():
         dates[ii] = parseDate(data, ii, 3)
 
     today = datetime.now().date()
-    todayStr = '{}/{}/{}'.format(today.year, today.month, today.day)
     totalDays = monthrange(today.year, today.month)[1]
-    remAllowance = monthlyAllowance
+    # remAllowance = monthlyAllowance
     tt = [date(today.year, today.month, day) for day in range(1, totalDays+1)]
     dailyCosts = np.zeros(len(tt))
+    perDiumCost = np.zeros_like(dailyCosts)
     for ii in range(noEntries):
         if today.month == dates[ii].month:
-            dailyCosts[dates[ii].day - 1] += cost[ii]
-            if daysFor[ii] > 1:
-                remAllowance = (remAllowance
-                                - ((today.day - dates[ii].day)
-                                   * cost[ii] / daysFor[ii]))
-            else:
-                remAllowance = remAllowance - cost[ii]
-    remAllowance = np.round(remAllowance, 2)
-    todayAllowance = np.round(remAllowance
+            ttind = dates[ii].day - 1
+            dF = int(daysFor[ii])
+            dailyCosts[ttind] += cost[ii]
+            perDiumCost[ttind:ttind+dF] += np.ones(dF) * cost[ii] / dF
+    todayAllowance = np.round((monthlyAllowance
+                               - np.sum(perDiumCost[:today.day]))
                               / (totalDays - today.day), 0)
     thisWeekAllow = todayAllowance * (7 - today.weekday())
 
@@ -111,16 +108,28 @@ def foodExpenses():
                                      '%Y/%m/%d').date()
         showedAllowance[ii] = float(allLines[ii].split(' ')[1])
 
+    writeOver = False
     if ttSA[-1] != today:
         ttSA.append(today)
         showedAllowance = np.append(showedAllowance, todayAllowance)
+        writeOver = True
+    elif showedAllowance[-1] != todayAllowance:
+        showedAllowance[-1] = todayAllowance
+        writeOver = True
+    if writeOver:
+        with open('showedAllowance.txt', 'w') as f:
+            for ii in range(len(ttSA)):
+                f.writelines(ttSA[ii].strftime('%Y/%m/%d ')
+                             + str(showedAllowance[ii]) + '\n')
 
     fig, ax = plt.subplots(1, 1, figsize=[16, 12])
-    ax.bar(tt, dailyCosts, label='Daily Costs', color='orange')
+    ax.bar(tt, perDiumCost, label='Effective daily expense',
+           color='tab:olive')
+    ax.bar(tt, dailyCosts, label='Daily Costs', color='tab:orange', alpha=0.3)
     ax.plot(tt, monthlyAllowance - np.cumsum(dailyCosts),
             label='Remaining Allowance', color='green')
     ax.plot(ttSA, showedAllowance, label='Showed allowance',
-            color='blue', ls='--')
+            color='tab:blue', ls='--')
     ax.legend()
     ax.set_title('Daily food expenses and remaining allowance')
     ax.set_ylabel('Cost [$]')
@@ -130,10 +139,6 @@ def foodExpenses():
             fontsize=36, color='red')
     fig.autofmt_xdate()
     fig.savefig('DailyCostsAndParameters.png')
-
-    if allLines[-1].split(' ')[0] != todayStr:
-        with open('showedAllowance.txt', 'a') as f:
-            f.writelines(todayStr + ' ' + str(todayAllowance) + '\n')
 
 
 if __name__ == "__main__":
