@@ -88,16 +88,19 @@ def foodExpenses():
     tt = [date(today.year, today.month, day) for day in range(1, totalDays+1)]
     dailyCosts = np.zeros(len(tt))
     perDiumCost = np.zeros_like(dailyCosts)
+    todayInd = today.day - 1
     for ii in range(noEntries):
         if today.month == dates[ii].month:
             ttind = dates[ii].day - 1
             dF = int(daysFor[ii])
             dailyCosts[ttind] += cost[ii]
             perDiumCost[ttind:ttind+dF] += np.ones(dF) * cost[ii] / dF
-    todayAllowance = np.round((monthlyAllowance
-                               - np.sum(perDiumCost[:today.day]))
-                              / (totalDays - today.day), 0)
+    todayAllowance = ((monthlyAllowance - np.sum(perDiumCost[:todayInd]))
+                      / (totalDays - todayInd))
     thisWeekAllow = todayAllowance * (7 - today.weekday())
+    todayRemAllow = todayAllowance - perDiumCost[todayInd]
+    thisWeekRemAllow = (thisWeekAllow
+                        - perDiumCost[todayInd:todayInd + 7 - today.weekday()])
 
     with open('showedAllowance.txt', 'r') as f:
         allLines = f.readlines()
@@ -107,6 +110,11 @@ def foodExpenses():
         ttSA[ii] = datetime.strptime(allLines[ii].split(' ')[0],
                                      '%Y/%m/%d').date()
         showedAllowance[ii] = float(allLines[ii].split(' ')[1])
+
+    todayAllowance = int(todayAllowance)
+    todayRemAllow = int(todayRemAllow)
+    thisWeekAllow = int(thisWeekAllow)
+    thisWeekRemAllow = int(thisWeekRemAllow)
 
     writeOver = False
     if ttSA[-1] != today:
@@ -133,9 +141,11 @@ def foodExpenses():
     ax.legend()
     ax.set_title('Daily food expenses and remaining allowance')
     ax.set_ylabel('Cost [$]')
-    ax.text(tt[5], monthlyAllowance/2,
-            '{}\nAllowance today: ${}\nAllowance this week: ${}'.format(
-                today.strftime('%b %d, %Y'), todayAllowance, thisWeekAllow),
+    ax.text(tt[3], monthlyAllowance/2,
+            '{}\nAllowance today (Total/Rem.): \${} / \${}\n'
+            'Allowance this week (Total/Rem.): \${} / \${}'.format(
+                today.strftime('%b %d, %Y'), todayAllowance, todayRemAllow,
+                thisWeekAllow, thisWeekRemAllow),
             fontsize=36, color='red')
     fig.autofmt_xdate()
     fig.savefig('DailyCostsAndParameters.png')
