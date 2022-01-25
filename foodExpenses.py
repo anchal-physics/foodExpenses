@@ -89,6 +89,7 @@ def foodExpenses():
     dailyCosts = np.zeros(len(tt))
     perDiumCost = np.zeros_like(dailyCosts)
     todayInd = today.day - 1
+    weekEndInd = min(todayInd + 7 - today.weekday(), len(tt))
     for ii in range(noEntries):
         if today.month == dates[ii].month:
             ttind = dates[ii].day - 1
@@ -100,7 +101,7 @@ def foodExpenses():
     thisWeekAllow = todayAllowance * (7 - today.weekday())
     todayRemAllow = todayAllowance - perDiumCost[todayInd]
     thisWeekRemAllow = (thisWeekAllow
-                        - perDiumCost[todayInd:todayInd + 7 - today.weekday()])
+                        - np.sum(perDiumCost[todayInd:weekEndInd]))
 
     with open('showedAllowance.txt', 'r') as f:
         allLines = f.readlines()
