@@ -44,7 +44,7 @@ credentials = ServiceAccountCredentials.from_json_keyfile_name(
                                             'foodexpenses-663287ec7fd3.json',
                                             scope)
 
-monthlyAllowance = 500
+defaultMonthlyAllowance = 500
 
 
 def parse(data, ii, ind):
@@ -71,7 +71,25 @@ def getData(spName="Food/Groceries expense monitor (Responses)",
     return ts, data
 
 
+def getMonthlyAllowance():
+    try:
+        with open('monthlyAllowance.txt', 'r') as f:
+            allLines = f.readlines()
+            mon = datetime.now().date().month
+            for line in allLines:
+                if mon == datetime.strptime(line.split(' ')[0],
+                                            '%m/%d/%Y').date().month:
+                    return int(line.split(' ')[1])
+    except BaseException:
+        pass
+    with open('monthlyAllowance.txt', 'a+') as f:
+        f.write(datetime.now().date().strftime('%m/%d/%Y ')
+                + str(defaultMonthlyAllowance))
+        return defaultMonthlyAllowance
+
+
 def foodExpenses():
+    monthlyAllowance = getMonthlyAllowance()
     ts, data = getData()
     noEntries = len(ts)
     cost = np.zeros(noEntries)
