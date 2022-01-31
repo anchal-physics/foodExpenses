@@ -1,6 +1,7 @@
 import gspread
 import numpy as np
-from datetime import datetime, date
+from datetime import datetime, date, timedelta
+from dateutil.relativedelta import relativedelta
 from calendar import monthrange
 from oauth2client.service_account import ServiceAccountCredentials
 import matplotlib.pyplot as plt  # For plotting
@@ -45,6 +46,7 @@ credentials = ServiceAccountCredentials.from_json_keyfile_name(
                                             scope)
 
 defaultMonthlyAllowance = 500
+startDate = date(2022, 1, 1)
 
 
 def parse(data, ii, ind):
@@ -102,20 +104,24 @@ def foodExpenses():
 
     today = datetime.now().date()
     totalDays = monthrange(today.year, today.month)[1]
-    # remAllowance = monthlyAllowance
-    tt = [date(today.year, today.month, day) for day in range(1, totalDays+1)]
-    dailyCosts = np.zeros(len(tt))
+    ttlen = date(today.year, today.month + 2, 1) - startDate
+    tt = [startDate + timedelta(days=int(ii)) for ii in range(ttlen.days)]
+    dailyCosts = np.zeros(ttlen.days)
     perDiumCost = np.zeros_like(dailyCosts)
-    todayInd = today.day - 1
-    weekEndInd = min(todayInd + 7 - today.weekday(), len(tt))
+    todayInd = tt.index(today)
+    monEndInd = tt.index(date(today.year, today.month, 1)
+                         + relativedelta(months=1))
+    weekEndInd = min(todayInd + 7 - today.weekday(), monEndInd)
+
     for ii in range(noEntries):
         if today.month == dates[ii].month:
             ttind = dates[ii].day - 1
             dF = int(daysFor[ii])
             dailyCosts[ttind] += cost[ii]
             perDiumCost[ttind:ttind+dF] += np.ones(dF) * cost[ii] / dF
-    todayAllowance = ((monthlyAllowance - np.sum(perDiumCost[:todayInd]))
-                      / (totalDays - todayInd))
+
+    thisMonRemAllow = monthlyAllowance - np.sum(perDiumCost[:todayInd])
+    todayAllowance = thisMonRemAllow / (totalDays - today.day + 1)
     thisWeekAllow = todayAllowance * (7 - today.weekday())
     todayRemAllow = todayAllowance - perDiumCost[todayInd]
     thisWeekRemAllow = (thisWeekAllow
@@ -134,6 +140,7 @@ def foodExpenses():
     todayRemAllow = int(todayRemAllow)
     thisWeekAllow = int(thisWeekAllow)
     thisWeekRemAllow = int(thisWeekRemAllow)
+    thisMonRemAllow = int(thisMonRemAllow)
 
     writeOver = False
     if ttSA[-1] != today:
@@ -149,23 +156,36 @@ def foodExpenses():
                 f.writelines(ttSA[ii].strftime('%Y/%m/%d ')
                              + str(showedAllowance[ii]) + '\n')
 
+    i0 = tt.index(date(today.year, today.month, 1))
+    i1 = tt.index(date(today.year, today.month + 1, 1))
+    for ii in range(1, totalDays + 1):
+        try:
+            i2 = ttSA.index(date(today.year, today.month, ii))
+            break
+        except BaseException:
+            pass
+
+    motd = '{}\nAllowance today (Total/Rem.): \${} / \${}\n'.format(
+                    today.strftime('%b %d, %Y'), todayAllowance, todayRemAllow)
+    if monEndInd - todayInd > 7:
+        motd += 'Allowance this week (Total/Rem.): \${} / \${}'.format(
+                    thisWeekAllow, thisWeekRemAllow)
+    else:
+        motd += 'Remaining allowance this month : \${}'.format(thisMonRemAllow)
+
     fig, ax = plt.subplots(1, 1, figsize=[16, 12])
-    ax.bar(tt, perDiumCost, label='Effective daily expense',
+    ax.bar(tt[i0:i1], perDiumCost[i0:i1], label='Effective daily expense',
            color='tab:olive')
-    ax.bar(tt, dailyCosts, label='Daily Costs', color='tab:orange', alpha=0.3)
-    ax.plot(tt, monthlyAllowance - np.cumsum(dailyCosts),
+    ax.bar(tt[i0:i1], dailyCosts[i0:i1], label='Daily Costs',
+           color='tab:orange', alpha=0.3)
+    ax.plot(tt[i0:i1], (monthlyAllowance - np.cumsum(dailyCosts))[i0:i1],
             label='Remaining Allowance', color='green')
-    ax.plot(ttSA, showedAllowance, label='Showed allowance',
+    ax.plot(ttSA[i2:], showedAllowance[i2:], label='Showed allowance',
             color='tab:blue', ls='--')
     ax.legend()
     ax.set_title('Daily food expenses and remaining allowance')
     ax.set_ylabel('Cost [$]')
-    ax.text(tt[3], monthlyAllowance/2,
-            '{}\nAllowance today (Total/Rem.): \${} / \${}\n'
-            'Allowance this week (Total/Rem.): \${} / \${}'.format(
-                today.strftime('%b %d, %Y'), todayAllowance, todayRemAllow,
-                thisWeekAllow, thisWeekRemAllow),
-            fontsize=36, color='red')
+    ax.text(tt[3], monthlyAllowance/2, motd, fontsize=36, color='red')
     fig.autofmt_xdate()
     fig.savefig('DailyCostsAndParameters.png')
 
