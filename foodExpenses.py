@@ -1,5 +1,6 @@
 import gspread
 import numpy as np
+from traceback import print_exc
 from datetime import datetime, date, timedelta
 from dateutil.relativedelta import relativedelta
 from calendar import monthrange
@@ -73,25 +74,34 @@ def getData(spName="Food/Groceries expense monitor (Responses)",
     return ts, data
 
 
-def getMonthlyAllowance():
-    try:
-        with open('monthlyAllowance.txt', 'r') as f:
-            allLines = f.readlines()
-            mon = datetime.now().date().month
-            for line in allLines:
-                if mon == datetime.strptime(line.split(' ')[0],
-                                            '%m/%d/%Y').date().month:
-                    return int(line.split(' ')[1])
-    except BaseException:
-        pass
+def getMonthlyAllowance(dat):
+    with open('monthlyAllowance.txt', 'r') as f:
+        allLines = f.readlines()
+        monArr = []
+        monAll = []
+        for line in allLines:
+            splits = line.split(' ')
+            monArr += [datetime.strptime(splits[0], '%m/%d/%Y').date()]
+            monAll += [int(splits[1])]
+    for ii, mon in enumerate(monArr):
+        if dat.year == mon.year and dat.month == mon.month:
+            return monAll[ii]
     with open('monthlyAllowance.txt', 'a+') as f:
-        f.write(datetime.now().date().strftime('%m/%d/%Y ')
-                + str(defaultMonthlyAllowance))
+        f.write(dat.strftime('%m/%d/%Y ')
+                + str(defaultMonthlyAllowance) + '\n')
         return defaultMonthlyAllowance
 
 
+def allAllowances():
+    dat = startDate
+    allowance = 0
+    while dat <= datetime.now().date():
+        allowance += getMonthlyAllowance(dat)
+        dat = dat + relativedelta(months=1)
+    return allowance
+
+
 def foodExpenses():
-    monthlyAllowance = getMonthlyAllowance()
     ts, data = getData()
     noEntries = len(ts)
     cost = np.zeros(noEntries)
@@ -108,19 +118,39 @@ def foodExpenses():
     tt = [startDate + timedelta(days=int(ii)) for ii in range(ttlen.days)]
     dailyCosts = np.zeros(ttlen.days)
     perDiumCost = np.zeros_like(dailyCosts)
+    remAllow = np.zeros_like(dailyCosts)
+    monLen = ((today.year - startDate.year) * 12
+              + today.month - startDate.month + 1)
+    monArr = [startDate + relativedelta(months=ii)
+              for ii in range(monLen)]
+    monArr2 = [dat + relativedelta(days=monthrange(dat.year, dat.month)[1]//2)
+               for dat in monArr]
+    monArr2[-1] = monArr[-1] + relativedelta(days=(today - monArr[-1]).days//2)
+    monWidths = [monthrange(ele.year, ele.month)[1] * 0.95 for ele in monArr]
+    monWidths[-1] = (today - monArr[-1]).days * 0.95
+    monCosts = np.zeros(monLen)
     todayInd = tt.index(today)
     monEndInd = tt.index(date(today.year, today.month, 1)
                          + relativedelta(months=1))
     weekEndInd = min(todayInd + 7 - today.weekday(), monEndInd)
 
     for ii in range(noEntries):
-        if today.month == dates[ii].month:
-            ttind = dates[ii].day - 1
-            dF = int(daysFor[ii])
-            dailyCosts[ttind] += cost[ii]
-            perDiumCost[ttind:ttind+dF] += np.ones(dF) * cost[ii] / dF
+        ttind = tt.index(dates[ii])
+        monInd = monArr.index(date(dates[ii].year, dates[ii].month, 1))
+        dF = int(daysFor[ii])
+        dailyCosts[ttind] += cost[ii]
+        perDiumCost[ttind:ttind+dF] += np.ones(dF) * cost[ii] / dF
+        monCosts[monInd] += cost[ii]
 
-    thisMonRemAllow = monthlyAllowance - np.sum(perDiumCost[:todayInd])
+    for ii in range(ttlen.days):
+        if ii != 0:
+            remAllow[ii] = remAllow[ii-1]
+        if tt[ii].day == 1:
+            remAllow[ii] += getMonthlyAllowance(tt[ii])
+        remAllow[ii] -= dailyCosts[ii]
+
+
+    thisMonRemAllow = allAllowances() - np.sum(perDiumCost[:todayInd])
     todayAllowance = thisMonRemAllow / (totalDays - today.day + 1)
     thisWeekAllow = todayAllowance * (7 - today.weekday())
     todayRemAllow = todayAllowance - perDiumCost[todayInd]
@@ -178,16 +208,38 @@ def foodExpenses():
            color='tab:olive')
     ax.bar(tt[i0:i1], dailyCosts[i0:i1], label='Daily Costs',
            color='tab:orange', alpha=0.3)
-    ax.plot(tt[i0:i1], (monthlyAllowance - np.cumsum(dailyCosts))[i0:i1],
-            label='Remaining Allowance', color='green')
+    ax.plot(tt[i0:i1],remAllow[i0:i1], label='Remaining Allowance',
+            color='green')
+    # ax.plot(tt[i0:i1], (monthlyAllowance - np.cumsum(dailyCosts))[i0:i1],
+    #         label='Remaining Allowance', color='green')
     ax.plot(ttSA[i2:], showedAllowance[i2:], label='Showed allowance',
             color='tab:blue', ls='--')
     ax.legend()
     ax.set_title('Daily food expenses and remaining allowance')
     ax.set_ylabel('Cost [$]')
-    ax.text(tt[3], monthlyAllowance/2, motd, fontsize=36, color='red')
+    ax.text(tt[i0 + 3], 250, motd, fontsize=36, color='red')
     fig.autofmt_xdate()
     fig.savefig('DailyCostsAndParameters.png')
+
+
+    fig, ax = plt.subplots(1, 1, figsize=[16, 12])
+    ax.bar(monArr2, monCosts, label='Monthly Costs', color='grey',
+           width=monWidths, alpha=0.3)
+    ax.bar(tt[:todayInd + 1], perDiumCost[:todayInd + 1], label='Effective daily expense',
+           color='tab:olive')
+    ax.bar(tt[:todayInd + 1], dailyCosts[:todayInd + 1], label='Daily Costs',
+           color='tab:orange', alpha=0.3)
+    ax.plot(tt[:todayInd + 1],remAllow[:todayInd + 1], label='Remaining Allowance',
+            color='green')
+    # ax.plot(tt[i0:i1], (monthlyAllowance - np.cumsum(dailyCosts))[i0:i1],
+    #         label='Remaining Allowance', color='green')
+    ax.plot(ttSA, showedAllowance, label='Showed allowance',
+            color='tab:blue', ls='--')
+    ax.legend()
+    ax.set_title('Daily food expenses and remaining allowance')
+    ax.set_ylabel('Cost [$]')
+    fig.autofmt_xdate()
+    fig.savefig('allTimeCostsAndParameters.png')
 
 
 if __name__ == "__main__":
