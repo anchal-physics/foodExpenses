@@ -1,3 +1,4 @@
 *.json
 *.ipynb
 *oauth.txt
+*__pycache__/*
