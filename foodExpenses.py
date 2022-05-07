@@ -101,8 +101,8 @@ def allAllowances():
     return allowance
 
 
-def foodExpenses():
-    ts, data = getData()
+def foodExpenses(credentials=credentials):
+    ts, data = getData(credentials=credentials)
     noEntries = len(ts)
     cost = np.zeros(noEntries)
     daysFor = np.zeros(noEntries)
@@ -148,7 +148,6 @@ def foodExpenses():
         if tt[ii].day == 1:
             remAllow[ii] += getMonthlyAllowance(tt[ii])
         remAllow[ii] -= dailyCosts[ii]
-
 
     thisMonRemAllow = allAllowances() - np.sum(perDiumCost[:todayInd])
     todayAllowance = thisMonRemAllow / (totalDays - today.day + 1)
@@ -208,7 +207,7 @@ def foodExpenses():
            color='tab:olive')
     ax.bar(tt[i0:i1], dailyCosts[i0:i1], label='Daily Costs',
            color='tab:orange', alpha=0.3)
-    ax.plot(tt[i0:i1],remAllow[i0:i1], label='Remaining Allowance',
+    ax.plot(tt[i0:i1], remAllow[i0:i1], label='Remaining Allowance',
             color='green')
     # ax.plot(tt[i0:i1], (monthlyAllowance - np.cumsum(dailyCosts))[i0:i1],
     #         label='Remaining Allowance', color='green')
@@ -221,7 +220,6 @@ def foodExpenses():
     fig.autofmt_xdate()
     fig.savefig('DailyCostsAndParameters.png')
 
-
     fig, ax = plt.subplots(1, 1, figsize=[16, 12])
     ax.bar(monArr2, monCosts, label='Monthly Costs', color='grey',
            width=monWidths, alpha=0.3)
@@ -229,7 +227,7 @@ def foodExpenses():
            color='tab:olive')
     ax.bar(tt[:todayInd + 1], dailyCosts[:todayInd + 1], label='Daily Costs',
            color='tab:orange', alpha=0.3)
-    ax.plot(tt[:todayInd + 1],remAllow[:todayInd + 1], label='Remaining Allowance',
+    ax.plot(tt[:todayInd + 1], remAllow[:todayInd + 1], label='Remaining Allowance',
             color='green')
     # ax.plot(tt[i0:i1], (monthlyAllowance - np.cumsum(dailyCosts))[i0:i1],
     #         label='Remaining Allowance', color='green')
@@ -243,4 +241,4 @@ def foodExpenses():
 
 
 if __name__ == "__main__":
-    foodExpenses()
+    foodExpenses(credentials=credentials)
